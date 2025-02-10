@@ -1,0 +1,59 @@
+cabal-version:   3.0
+name:            block-buster
+version:         0.1.0.0
+license:
+author:          MLabs
+maintainer:      seungheon@mlabs.city
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveAnyClass
+    DeriveGeneric
+    DeriveTraversable
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NoStarIsType
+    NumericUnderscores
+    OverloadedLabels
+    OverloadedStrings
+    PackageImports
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wredundant-constraints
+    -Wmissing-export-lists -Wmissing-deriving-strategies
+
+library
+  import:          lang
+  hs-source-dirs:  src
+  build-depends:   
+    , base >=4.9 && <5
+    , cardano-api
+    
+  exposed-modules: 
+    BlockBuster.Run
+
+
