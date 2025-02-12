@@ -50,8 +50,9 @@ library
   import:          lang
   hs-source-dirs:  src
   build-depends:
-    , base         >=4.9 && <5
+    , base                  >=4.9 && <5
     , cardano-api
+    , cardano-ledger-byron
 
   exposed-modules:
     BlockBuster.ChainSync
