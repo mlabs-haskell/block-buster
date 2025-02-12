@@ -97,9 +97,7 @@
         in
         {
           inherit (flake) devShells;
-          packages = flake.packages // {
-
-          };
+          packages = flake.packages // { };
           checks = flake.checks // {
             on-chain-tests = pkgs.stdenv.mkDerivation
               {

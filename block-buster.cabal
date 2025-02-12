@@ -49,11 +49,10 @@ common lang
 library
   import:          lang
   hs-source-dirs:  src
-  build-depends:   
-    , base >=4.9 && <5
+  build-depends:
+    , base         >=4.9 && <5
     , cardano-api
-    
-  exposed-modules: 
+
+  exposed-modules:
+    BlockBuster.ChainSync
     BlockBuster.Run
-
-
