@@ -54,6 +54,15 @@ library
     , cardano-api
     , cardano-ledger-byron
 
-  exposed-modules:
-    BlockBuster.ChainSync
-    BlockBuster.Run
+  exposed-modules: BlockBuster.ChainSync
+
+executable example
+  import:         lang
+  main-is:        Main.hs
+  build-depends:
+    , base          >=4.9 && <5
+    , block-buster
+
+  hs-source-dirs: example
+  ghc-options:    -threaded -rtsopts
+  other-modules:

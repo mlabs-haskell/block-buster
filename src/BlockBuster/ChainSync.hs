@@ -2,10 +2,12 @@ module BlockBuster.ChainSync (
   startFollower,
   startClient,
   BBNodeInfo,
+  mkConfig,
 ) where
 
 import Cardano.Api qualified as CApi
 import Cardano.Api.ChainSync.Client qualified as CApi.Sync
+import Cardano.Chain.Epoch.File (mainnetEpochSlots)
 import Control.Monad.IO.Class (MonadIO)
 
 startFollower :: IO ()
@@ -15,6 +17,13 @@ type Client c = c CApi.BlockInMode CApi.ChainPoint CApi.ChainTip IO ()
 
 type BBNodeInfo = CApi.LocalNodeConnectInfo
 type IntersectionPoint = CApi.ChainPoint
+
+mkConfig socket netMagic =
+  CApi.LocalNodeConnectInfo
+    { localConsensusModeParams = CApi.CardanoModeParams mainnetEpochSlots
+    , localNodeNetworkId = CApi.Testnet $ CApi.NetworkMagic netMagic
+    , localNodeSocketPath = CApi.File socket
+    }
 
 toApiNodeInfo :: BBNodeInfo -> CApi.LocalNodeConnectInfo
 toApiNodeInfo = id
@@ -40,7 +49,7 @@ chainSyncClient points = CApi.ChainSyncClient $ pure (findIntersection points)
               pure requestNext
           , CApi.Sync.recvMsgIntersectNotFound = \tip -> do
               CApi.ChainSyncClient $ do
-                putStrLn $ "Intersection found: " -- <> show tip
+                putStrLn $ "Intersection NOT found: " -- <> show tip
                 if null points
                   then pure $ findIntersection [CApi.chainTipToChainPoint tip]
                   else do
