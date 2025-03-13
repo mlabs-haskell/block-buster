@@ -4,8 +4,6 @@
   inputs = {
     # House keeping
     nixpkgs.url = "github:NixOS/nixpkgs";
-    flake-parts.url = "github:hercules-ci/flake-parts";
-    hercules-ci-effects.url = "github:hercules-ci/hercules-ci-effects";
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
 
     # Haskell bits
@@ -29,14 +27,12 @@
   outputs = inputs@{ flake-parts, nixpkgs, haskell-nix, iohk-nix, CHaP, MHaP, pre-commit-hooks, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        inputs.hercules-ci-effects.flakeModule
         inputs.pre-commit-hooks.flakeModule
       ];
 
       systems = [ "x86_64-linux" ];
-      hercules-ci.github-pages.branch = "master";
 
-      perSystem = { config, system, self', ... }:
+      perSystem = { config, system, ... }:
         let
           pkgs = import nixpkgs {
             inherit system;
@@ -113,7 +109,6 @@
               };
 
           };
-          hercules-ci.github-pages.settings.contents = self'.packages.documents;
 
           pre-commit = {
             settings = {
