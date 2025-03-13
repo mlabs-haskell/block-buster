@@ -1,23 +1,53 @@
 module BlockBuster.ChainSync (
-  startFollower,
   startClient,
-  BBNodeInfo,
+  ConnectionConfig,
   mkConfig,
+  ChainEvent (..),
+  spawnPollClient,
+  poll,
+  stopSyncing,
+  PollingClient,
 ) where
 
 import Cardano.Api qualified as CApi
 import Cardano.Api.ChainSync.Client qualified as CApi.Sync
 import Cardano.Chain.Epoch.File (mainnetEpochSlots)
+import Control.Concurrent.Async qualified as Async
+import Control.Concurrent.Chan.Unagi.Bounded qualified as UC
 import Control.Monad.IO.Class (MonadIO)
+import Data.Word (Word32)
 
-startFollower :: IO ()
-startFollower = undefined
+data PollingClient
+  = PollChainSyncClient
+      (Async.Async ())
+      (UC.OutChan ChainEvent)
 
-type Client c = c CApi.BlockInMode CApi.ChainPoint CApi.ChainTip IO ()
+data ChainEvent
+  = RollForward CApi.BlockInMode CApi.ChainTip
+  | RollBack CApi.ChainPoint CApi.ChainTip
+  deriving stock (Show)
 
-type BBNodeInfo = CApi.LocalNodeConnectInfo
+type ConnectionConfig = CApi.LocalNodeConnectInfo
 type IntersectionPoint = CApi.ChainPoint
 
+spawnPollClient :: ConnectionConfig -> [IntersectionPoint] -> IO PollingClient
+spawnPollClient nodeInfo points = do
+  (inChan, outCahn) <- UC.newChan 4
+  let
+    callback ev = do
+      putStrLn "Writing message to chan"
+      UC.writeChan inChan ev
+  res <- Async.async $ do
+    startClient nodeInfo points callback
+  pure $ PollChainSyncClient res outCahn
+
+poll :: PollingClient -> IO ChainEvent
+poll (PollChainSyncClient _ outChan) = UC.readChan outChan
+
+stopSyncing :: PollingClient -> IO ()
+stopSyncing (PollChainSyncClient as _) = Async.cancel as
+
+mkConfig :: FilePath -> Word32 -> ConnectionConfig
 mkConfig socket netMagic =
   CApi.LocalNodeConnectInfo
     { localConsensusModeParams = CApi.CardanoModeParams mainnetEpochSlots
@@ -25,31 +55,46 @@ mkConfig socket netMagic =
     , localNodeSocketPath = CApi.File socket
     }
 
-toApiNodeInfo :: BBNodeInfo -> CApi.LocalNodeConnectInfo
+toApiNodeInfo :: ConnectionConfig -> CApi.LocalNodeConnectInfo
 toApiNodeInfo = id
 
-startClient :: (MonadIO m) => BBNodeInfo -> [IntersectionPoint] -> m ()
-startClient nodeInfo points =
+-- Cardano Api chain sync client code
+type ChainSyncCallback = ChainEvent -> IO ()
+
+startClient ::
+  (MonadIO m) =>
+  ConnectionConfig ->
+  [IntersectionPoint] ->
+  ChainSyncCallback ->
+  m ()
+startClient nodeInfo points callback =
   CApi.connectToLocalNode
     (toApiNodeInfo nodeInfo)
     CApi.LocalNodeClientProtocols
-      { localChainSyncClient = CApi.LocalChainSyncClient $ chainSyncClient points
+      { localChainSyncClient = CApi.LocalChainSyncClient $ chainSyncClient points callback
       , localTxSubmissionClient = Nothing
       , localStateQueryClient = Nothing
       , localTxMonitoringClient = Nothing
       }
 
-chainSyncClient points = CApi.ChainSyncClient $ pure (findIntersection points)
+type Client c = c CApi.BlockInMode CApi.ChainPoint CApi.ChainTip IO ()
+
+chainSyncClient ::
+  [CApi.ChainPoint] ->
+  ChainSyncCallback ->
+  Client CApi.Sync.ChainSyncClient
+chainSyncClient intersectionPoints callback =
+  CApi.ChainSyncClient $ pure (findIntersection intersectionPoints)
   where
     findIntersection points =
       CApi.Sync.SendMsgFindIntersect points $
         CApi.Sync.ClientStIntersect
-          { CApi.Sync.recvMsgIntersectFound = \point tip -> CApi.ChainSyncClient $ do
-              putStrLn $ "Intersection found: " -- <> show (point, tip)
+          { CApi.Sync.recvMsgIntersectFound = \_point _tip -> CApi.ChainSyncClient $ do
+              putStrLn "CAPiClient:  Intersection found"
               pure requestNext
           , CApi.Sync.recvMsgIntersectNotFound = \tip -> do
               CApi.ChainSyncClient $ do
-                putStrLn $ "Intersection NOT found: " -- <> show tip
+                putStrLn "CAPiClient:  Intersection NOT found"
                 if null points
                   then pure $ findIntersection [CApi.chainTipToChainPoint tip]
                   else do
@@ -62,9 +107,11 @@ chainSyncClient points = CApi.ChainSyncClient $ pure (findIntersection points)
     handleNext =
       CApi.Sync.ClientStNext
         { CApi.Sync.recvMsgRollForward = \block tip -> CApi.ChainSyncClient $ do
-            putStrLn $ "Got roll forward: " -- <> show (block, tip)
+            putStrLn "CAPiClient:  Got roll forward"
+            callback $ RollForward block tip
             pure requestNext
         , CApi.Sync.recvMsgRollBackward = \point tip -> CApi.ChainSyncClient $ do
-            putStrLn $ "Got rollback: " -- <> show (point, tip)
+            putStrLn "CAPiClient: Got rollback"
+            callback $ RollBack point tip
             pure requestNext
         }
