@@ -54,11 +54,15 @@ library
     , base                  >=4.9 && <5
     , cardano-api
     , cardano-ledger-byron
+    , retry
+    , text
+    , tomland
     , unagi-chan
 
   exposed-modules:
     BlockBuster.ChainSync
     BlockBuster.Producer
+    BlockBuster.Config
 
 executable example
   import:         lang

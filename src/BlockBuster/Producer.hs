@@ -1,9 +1,10 @@
-module BlockBuster.Producer (
-  DomainEvents (..),
-  SlotInfo (..),
-  DomainEvent (..),
-  runProducer,
-) where
+module BlockBuster.Producer
+  ( DomainEvents (..),
+    SlotInfo (..),
+    DomainEvent (..),
+    runProducer,
+  )
+where
 
 import BlockBuster.ChainSync (ChainEvent, PollingClient)
 import BlockBuster.ChainSync qualified as ChainSync
@@ -22,7 +23,7 @@ data SlotInfo = SlotInfo
 -- TODO: something useful to provide access to the stream of domain events
 type Producer = Void
 
-runProducer :: PollingClient -> (ChainEvent -> DomainEvents) -> IO Producer
+runProducer :: (Show d) => PollingClient -> (ChainEvent -> d) -> IO Producer
 runProducer pollClient cb = do
   forever $ do
     chainEvent <- ChainSync.poll pollClient

@@ -1,0 +1,14 @@
+[source]
+type = "N2C"
+socket_path = "/Users/micah.mcomp/cardano/node.socket"
+network_magic = 764824073
+
+[intersect]
+type = "point"
+point = { slot = 140522340, hash = "8ee13d0669f7860832214e8dbc8173d2ebe7855f66ff1c8608ca1f6c5569bb3c" }
+
+[sink]
+type = "Stdout"
+
+[retries]
+max_retries = 5
